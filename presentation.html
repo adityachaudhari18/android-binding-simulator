@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Android Binding Attack — Presentation</title>
+<style>
+:root{
+  --bg:#06090f;
+  --panel:#0e1623;
+  --card:#141e30;
+  --border:#1e2d45;
+  --accent:#00ff88;
+  --red:#ff4d6d;
+  --blue:#4da6ff;
+  --warn:#ffd166;
+  --purple:#c792ea;
+  --text:#e8eeff;
+  --muted:#6a7a99;
+  --mono:'Courier New',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;}
+
+/* ── SLIDE ENGINE ── */
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transition:opacity .6s ease, transform .6s ease;
+  transform:translateX(60px);
+  overflow:hidden;
+}
+.slide.active{
+  opacity:1;pointer-events:all;
+  transform:translateX(0);
+}
+.slide.exit{
+  opacity:0;transform:translateX(-60px);
+}
+
+/* ── BACKGROUND GRIDS ── */
+.grid-bg{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,255,136,.03) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,255,136,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+
+/* ── NAV BAR ── */
+#nav{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:16px;
+  background:rgba(14,22,35,.92);
+  border:1px solid var(--border);
+  border-radius:50px;
+  padding:10px 20px;
+  backdrop-filter:blur(12px);
+  z-index:1000;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+}
+#nav button{
+  background:transparent;border:none;color:var(--muted);
+  font-size:1.2rem;cursor:pointer;
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+#nav button:hover{background:rgba(255,255,255,.07);color:var(--text);}
+#nav button.active-btn{color:var(--accent);}
+
+#slide-counter{
+  font-size:.78rem;color:var(--muted);font-family:var(--mono);
+  min-width:48px;text-align:center;
+}
+
+.dot-nav{display:flex;gap:6px;align-items:center;}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--border);cursor:pointer;
+  transition:all .3s;
+}
+.dot.active{background:var(--accent);transform:scale(1.4);}
+
+#progress-bar{
+  position:fixed;top:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--blue));
+  transition:width .5s ease;z-index:999;
+}
+
+/* ── CORNER ── */
+#corner{
+  position:fixed;top:16px;right:20px;z-index:999;
+  display:flex;gap:10px;align-items:center;
+}
+.badge{
+  font-size:.65rem;font-weight:700;letter-spacing:1px;
+  padding:4px 10px;border-radius:20px;text-transform:uppercase;
+}
+.badge-red{background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);}
+.badge-green{background:rgba(0,255,136,.1);border:1px solid var(--accent);color:var(--accent);}
+.badge-blue{background:rgba(77,166,255,.1);border:1px solid var(--blue);color:var(--blue);}
+
+#corner-slide{font-size:.7rem;color:var(--muted);font-family:var(--mono);}
+
+/* ── SHORTCUT HINT ── */
+#shortcut-hint{
+  position:fixed;top:16px;left:20px;z-index:999;
+  font-size:.65rem;color:var(--muted);
+  background:rgba(14,22,35,.7);border:1px solid var(--border);
+  padding:5px 10px;border-radius:6px;
+}
+
+/* ── TYPOGRAPHY ── */
+.slide-title{
+  font-size:clamp(2rem,5vw,3.8rem);
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:-1px;
+}
+.slide-sub{
+  font-size:clamp(.85rem,2vw,1.15rem);
+  color:var(--muted);
+  line-height:1.7;
+  max-width:680px;
+}
+.tag{
+  display:inline-block;
+  font-size:.7rem;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:12px;
+  opacity:.8;
+}
+.highlight{color:var(--accent);}
+.highlight-red{color:var(--red);}
+.highlight-blue{color:var(--blue);}
+.highlight-warn{color:var(--warn);}
+
+/* ── CARDS ── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px 24px;
+}
+.card-red{border-color:rgba(255,77,109,.35);background:rgba(255,77,109,.04);}
+.card-green{border-color:rgba(0,255,136,.25);background:rgba(0,255,136,.03);}
+.card-blue{border-color:rgba(77,166,255,.25);background:rgba(77,166,255,.03);}
+.card-warn{border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.03);}
+
+/* ── CODE ── */
+.code{
+  background:#050b14;border:1px solid var(--border);border-radius:10px;
+  padding:16px 20px;font-family:var(--mono);font-size:.8rem;
+  line-height:1.9;overflow-x:auto;
+}
+.k{color:var(--purple);}
+.s{color:#c3e88d;}
+.f{color:var(--blue);}
+.c{color:#546e7a;font-style:italic;}
+.r{color:var(--red);}
+.g{color:var(--accent);}
+.w{color:var(--warn);}
+
+/* ── STEP FLOW ── */
+.step-flow{
+  display:flex;align-items:stretch;gap:0;
+  margin:24px 0;
+}
+.step-box{
+  flex:1;
+  background:var(--card);border:1px solid var(--border);
+  padding:16px 14px;
+  text-align:center;
+  position:relative;
+  transition:all .3s;
+}
+.step-box:first-child{border-radius:12px 0 0 12px;}
+.step-box:last-child{border-radius:0 12px 12px 0;}
+.step-box.danger{border-color:rgba(255,77,109,.4);background:rgba(255,77,109,.05);}
+.step-box .s-icon{font-size:1.6rem;display:block;margin-bottom:6px;}
+.step-box .s-label{font-size:.72rem;font-weight:700;color:var(--text);}
+.step-box .s-sub{font-size:.62rem;color:var(--muted);margin-top:3px;}
+.step-arrow{
+  display:flex;align-items:center;
+  color:var(--muted);font-size:1.1rem;
+  padding:0 2px;
+  background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+
+/* ── PERMISSION TABLE ── */
+.perm-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.perm-tag{
+  font-size:.65rem;font-family:var(--mono);font-weight:600;
+  padding:4px 10px;border-radius:5px;
+}
+.perm-normal{background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.3);color:var(--blue);}
+.perm-danger{background:rgba(255,77,109,.15);border:1px solid rgba(255,77,109,.4);color:var(--red);}
+.perm-added{background:rgba(255,77,109,.25);border:1px solid var(--red);color:#fff;font-weight:800;}
+
+/* ── PHONE MOCKUP (compact) ── */
+.phone-row{display:flex;gap:24px;align-items:flex-start;justify-content:center;}
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.phone-lbl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.phone-device{
+  width:120px;height:240px;
+  background:#0a1220;border:3px solid #253347;border-radius:22px;
+  position:relative;overflow:hidden;
+  box-shadow:0 0 30px rgba(0,0,0,.5);
+}
+.phone-notch{
+  width:44px;height:11px;background:#141e30;
+  border-radius:0 0 8px 8px;
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+}
+.phone-screen{
+  position:absolute;inset:0;padding:18px 6px 6px;
+  display:flex;flex-direction:column;gap:5px;
+}
+.phone-status{display:flex;justify-content:space-between;font-size:6px;color:var(--muted);}
+.app-icon-mini{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  position:relative;
+}
+.app-legit{background:linear-gradient(135deg,#1a6fff,#0ea5e9);}
+.app-bound{background:linear-gradient(135deg,var(--red),#ff8c00);animation:glowR 2s infinite;}
+@keyframes glowR{0%,100%{box-shadow:0 0 5px rgba(255,77,109,.3)}50%{box-shadow:0 0 16px rgba(255,77,109,.8)}}
+.app-name-mini{font-size:6px;color:var(--muted);text-align:center;margin-top:2px;}
+.virus-badge{
+  position:absolute;top:-3px;right:-3px;
+  background:var(--red);color:#fff;font-size:7px;font-weight:800;
+  padding:1px 3px;border-radius:3px;
+}
+
+/* ── LIST ── */
+.list-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);
+  font-size:.9rem;line-height:1.6;
+}
+.list-item:last-child{border-bottom:none;}
+.list-icon{font-size:1.2rem;flex-shrink:0;margin-top:1px;}
+
+/* ── SMALI ── */
+.smali{
+  background:#050b14;border:1px solid var(--border);border-radius:10px;
+  padding:14px 18px;font-family:var(--mono);font-size:.72rem;line-height:1.9;
+}
+.sm-dir{color:var(--purple);}
+.sm-op{color:var(--blue);}
+.sm-str{color:#c3e88d;}
+.sm-lbl{color:var(--warn);}
+.sm-inj{color:var(--red);background:rgba(255,77,109,.1);padding:1px 4px;border-radius:3px;}
+
+/* ── DEFENSE TABLE ── */
+.def-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.def-table th{
+  background:var(--card);color:var(--muted);
+  text-transform:uppercase;font-size:.65rem;letter-spacing:1.5px;
+  padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);
+}
+.def-table td{
+  padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);
+  vertical-align:top;
+}
+.def-table tr:last-child td{border-bottom:none;}
+.def-table .c-red{color:var(--red);}
+.def-table .c-green{color:var(--accent);}
+
+/* ── STAT ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:20px;text-align:center;
+}
+.stat-val{font-size:2.2rem;font-weight:800;font-family:var(--mono);}
+.stat-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+.stat-card.red .stat-val{color:var(--red);}
+.stat-card.green .stat-val{color:var(--accent);}
+.stat-card.blue .stat-val{color:var(--blue);}
+.stat-card.warn .stat-val{color:var(--warn);}
+
+/* ── TIMELINE ── */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:16px;align-items:stretch;}
+.tl-left{display:flex;flex-direction:column;align-items:center;gap:0;width:36px;flex-shrink:0;}
+.tl-dot{
+  width:14px;height:14px;border-radius:50%;
+  flex-shrink:0;margin-top:4px;
+}
+.tl-line{flex:1;width:2px;background:var(--border);}
+.tl-content{flex:1;padding:0 0 20px 0;}
+.tl-title{font-size:.9rem;font-weight:700;margin-bottom:4px;}
+.tl-desc{font-size:.78rem;color:var(--muted);line-height:1.6;}
+
+/* ── DEMO BUTTON ── */
+.demo-btn{
+  display:inline-flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,var(--red),#ff8c00);
+  color:#fff;border:none;border-radius:10px;
+  padding:14px 26px;font-size:.92rem;font-weight:700;
+  cursor:pointer;letter-spacing:.5px;
+  box-shadow:0 0 30px rgba(255,77,109,.35);
+  transition:all .2s;text-decoration:none;
+}
+.demo-btn:hover{filter:brightness(1.15);transform:translateY(-2px);}
+.demo-btn-outline{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text);padding:14px 26px;border-radius:10px;
+  font-size:.88rem;font-weight:600;cursor:pointer;
+  transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+}
+.demo-btn-outline:hover{border-color:var(--blue);color:var(--blue);}
+
+/* ── SCROLL ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scanline{0%{top:-10%}100%{top:110%}}
+.slide.active .animate{animation:fadeUp .5s ease both;}
+.slide.active .animate:nth-child(1){animation-delay:.1s}
+.slide.active .animate:nth-child(2){animation-delay:.2s}
+.slide.active .animate:nth-child(3){animation-delay:.3s}
+.slide.active .animate:nth-child(4){animation-delay:.4s}
+.slide.active .animate:nth-child(5){animation-delay:.5s}
+.slide.active .animate:nth-child(6){animation-delay:.6s}
+
+/* ── SCANLINE EFFECT ── */
+.scanline-fx{
+  position:absolute;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  opacity:.15;animation:scanline 4s linear infinite;
+  pointer-events:none;
+}
+
+/* ── HEX DECO ── */
+.hex-deco{
+  position:absolute;right:-80px;top:-80px;
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(0,255,136,.04) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* ── SPLIT LAYOUT ── */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;}
+.split-60{display:grid;grid-template-columns:1.4fr 1fr;gap:32px;align-items:start;}
+
+/* ── FULLSCREEN CONTENT ── */
+.slide-inner{
+  flex:1;display:flex;flex-direction:column;
+  padding:40px 60px;overflow-y:auto;
+  position:relative;z-index:1;
+}
+
+/* slide-specific tweaks */
+#s0 .slide-inner{justify-content:center;align-items:flex-start;}
+
+/* ── TAG LINE ── */
+.tag-line{
+  font-size:.7rem;letter-spacing:2px;text-transform:uppercase;
+  color:var(--accent);font-weight:700;margin-bottom:8px;
+}
+
+/* ── PRESENTER NOTE ── */
+.presenter-note{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.3);
+  border-radius:8px;padding:8px 16px;font-size:.72rem;color:var(--warn);
+  text-align:center;max-width:600px;
+  transition:opacity .4s;
+  z-index:998;pointer-events:none;
+}
+
+/* glow line */
+.glow-line{height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:20px 0;opacity:.3;}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div id="progress-bar" style="width:0%"></div>
+
+<!-- CORNER BADGES -->
+<div id="corner">
+  <span class="badge badge-red">⚠ DEMO</span>
+  <span class="badge badge-green">Educational</span>
+  <span id="corner-slide" class="badge badge-blue">Slide 1/10</span>
+</div>
+
+<!-- SHORTCUT HINT -->
+<div id="shortcut-hint">← → Arrow keys to navigate &nbsp;|&nbsp; F = Fullscreen</div>
+
+<!-- PRESENTER NOTE (shown per slide) -->
+<div class="presenter-note" id="pnote"></div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 0 — TITLE
+══════════════════════════════════════════ -->
+<div class="slide active" id="s0">
+  <div class="grid-bg"></div>
+  <div class="scanline-fx"></div>
+  <div class="hex-deco"></div>
+
+  <div class="slide-inner">
+    <div class="animate tag-line">Mobile Security Research — Presentation</div>
+    <div class="animate slide-title" style="margin-bottom:20px">
+      Android<br>
+      <span style="color:var(--red)">Binding</span><br>
+      Attack
+    </div>
+    <div class="animate slide-sub" style="margin-bottom:36px">
+      How attackers trojanize legitimate Android apps by injecting malicious payloads —
+      and how defenders detect and stop them.
+    </div>
+    <div class="animate" style="display:flex;gap:14px;flex-wrap:wrap">
+      <a href="index.html" target="_blank" class="demo-btn">🚀 Launch Live Demo</a>
+      <button class="demo-btn-outline" onclick="nextSlide()">▶ Start Presentation →</button>
+    </div>
+    <div class="glow-line animate" style="margin-top:36px;max-width:400px"></div>
+    <div class="animate" style="display:flex;gap:24px;flex-wrap:wrap;margin-top:6px">
+      <div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--red)">10</div>
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Slides</div>
+      </div>
+      <div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--accent)">6</div>
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Attack Steps</div>
+      </div>
+      <div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--blue)">5</div>
+        <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Live Payloads</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1 — WHAT IS APK BINDING?
+══════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Concept Overview</div>
+    <div class="animate slide-title" style="font-size:clamp(1.8rem,4vw,3rem);margin-bottom:24px">
+      What is <span class="highlight-red">APK Binding?</span>
+    </div>
+    <div class="animate split">
+      <div>
+        <p class="slide-sub" style="margin-bottom:20px">
+          APK Binding (also called <strong style="color:var(--warn)">APK Trojanizing</strong>) is an attack where an adversary takes a <strong style="color:var(--blue)">legitimate, trusted Android app</strong> and secretly embeds a <strong style="color:var(--red)">malicious payload</strong> inside it.
+        </p>
+        <div class="list-item animate">
+          <span class="list-icon">📦</span>
+          <div>The victim installs what looks like a <strong>normal app</strong> from a third-party source or messaging link.</div>
+        </div>
+        <div class="list-item animate">
+          <span class="list-icon">🎭</span>
+          <div>The app <strong>works normally</strong> — victim sees no suspicious behavior.</div>
+        </div>
+        <div class="list-item animate">
+          <span class="list-icon">💀</span>
+          <div>Simultaneously, a hidden payload <strong>runs in the background</strong> — stealing data, tracking location, intercepting SMS.</div>
+        </div>
+        <div class="list-item animate">
+          <span class="list-icon">📡</span>
+          <div>Stolen data is silently <strong>exfiltrated</strong> to the attacker's C2 server.</div>
+        </div>
+      </div>
+      <div class="animate">
+        <div class="card card-red" style="margin-bottom:16px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:10px">🔴 HOW IT LOOKS TO VICTIM</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.8">
+            ✓ App icon looks identical<br>
+            ✓ App name is unchanged<br>
+            ✓ All features work normally<br>
+            ✗ Dangerous permissions added<br>
+            ✗ Background service running<br>
+            ✗ Data being sent to attacker
+          </div>
+        </div>
+        <div class="card card-blue">
+          <div style="font-size:.72rem;font-weight:700;color:var(--blue);margin-bottom:10px">📊 REAL-WORLD SCALE</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.8">
+            <span style="color:var(--red);font-weight:700">~12%</span> of apps on 3rd-party stores are bound<br>
+            <span style="color:var(--warn);font-weight:700">&gt;1B</span> Android devices at risk<br>
+            <span style="color:var(--accent);font-weight:700">Play Protect</span> catches most, not all
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2 — ATTACK FLOW OVERVIEW
+══════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Attack Architecture</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:28px">
+      The 6-Step <span class="highlight-red">Attack Flow</span>
+    </div>
+    <div class="animate step-flow">
+      <div class="step-box">
+        <span class="s-icon">📦</span>
+        <div class="s-label">1. Select APK</div>
+        <div class="s-sub">Pick legitimate app</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step-box">
+        <span class="s-icon">🔓</span>
+        <div class="s-label">2. Decompile</div>
+        <div class="s-sub">apktool → smali</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step-box danger">
+        <span class="s-icon">💉</span>
+        <div class="s-label">3. Inject</div>
+        <div class="s-sub">Insert payload classes</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step-box danger">
+        <span class="s-icon">🔄</span>
+        <div class="s-label">4. Repack</div>
+        <div class="s-sub">Rebuild + re-sign</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step-box danger">
+        <span class="s-icon">🚀</span>
+        <div class="s-label">5. Deploy</div>
+        <div class="s-sub">Social engineering</div>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step-box danger">
+        <span class="s-icon">📡</span>
+        <div class="s-label">6. C2 Comm</div>
+        <div class="s-sub">Data exfiltration</div>
+      </div>
+    </div>
+    <div class="animate" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+      <div class="card">
+        <div style="font-size:.72rem;font-weight:700;color:var(--blue);margin-bottom:10px">🛠 TOOLS USED</div>
+        <div class="perm-grid">
+          <span class="perm-tag perm-normal">apktool</span>
+          <span class="perm-tag perm-normal">jarsigner</span>
+          <span class="perm-tag perm-normal">zipalign</span>
+          <span class="perm-tag perm-normal">adb</span>
+          <span class="perm-tag perm-normal">keytool</span>
+          <span class="perm-tag perm-normal">smali/baksmali</span>
+        </div>
+      </div>
+      <div class="card card-red">
+        <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:10px">⚡ ATTACKER PREREQUISITES</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.9">
+          • Kali Linux / any Linux distro<br>
+          • Java Development Kit (JDK)<br>
+          • Android SDK Tools<br>
+          • Target APK file
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3 — STEP 1 & 2: SELECT + DECOMPILE
+══════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Phase 1 & 2</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:20px">
+      Select Target &amp; <span class="highlight">Decompile</span>
+    </div>
+    <div class="animate split-60">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--warn);margin-bottom:8px">🎯 CHOOSING A TARGET</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.9">
+            Attackers pick apps that:<br>
+            • Are popular (high install count = more victims)<br>
+            • Require many permissions (camera, contacts, location)<br>
+            • Are commonly shared peer-to-peer (WhatsApp, games)<br>
+            • Are distributed outside the Play Store
+          </div>
+        </div>
+        <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:8px">📟 DECOMPILE COMMAND</div>
+        <div class="code animate">
+<span class="c"># Extract smali bytecode from APK</span>
+<span class="g">$</span> apktool <span class="k">d</span> WhatsApp_Clone.apk
+
+I: Using Apktool 2.9.3
+I: Decoding AndroidManifest.xml...
+I: Baksmaling classes.dex...
+I: Copying assets and libs...
+<span class="g">[+] Output: ./WhatsApp_Clone/</span>
+        </div>
+        <div class="code animate" style="margin-top:12px">
+<span class="c"># What gets extracted:</span>
+WhatsApp_Clone/
+  ├── <span class="s">AndroidManifest.xml</span>   <span class="c"># ← editable!</span>
+  ├── <span class="s">smali/</span>                <span class="c"># ← bytecode!</span>
+  ├── res/                  <span class="c"># resources</span>
+  └── assets/               <span class="c"># raw files</span>
+        </div>
+      </div>
+      <div class="animate">
+        <div class="card card-blue">
+          <div style="font-size:.72rem;font-weight:700;color:var(--blue);margin-bottom:10px">🔬 WHAT IS SMALI?</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8;margin-bottom:12px">
+            Smali is a human-readable assembly language for Android's Dalvik VM. When you decompile an APK, Java bytecode becomes editable smali files.
+          </div>
+          <div class="smali">
+<span class="sm-dir">.class</span> <span class="sm-op">public</span> Lcom/whatsapp/<span class="sm-lbl">MainActivity</span>;
+<span class="sm-dir">.method</span> <span class="sm-op">public</span> <span class="sm-lbl">onCreate</span>()V
+  <span class="sm-op">invoke-super</span> {p0}
+  <span class="sm-op">return-void</span>
+<span class="sm-dir">.end method</span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--warn);margin-bottom:8px">⚠ WHY THIS WORKS</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">
+            Android APKs are <strong style="color:var(--text)">not encrypted</strong>. Anyone with apktool can decompile any APK. ProGuard/R8 only obfuscates names — the logic is still reversible.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4 — PAYLOAD INJECTION
+══════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Phase 3 — Most Critical Step</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:20px">
+      <span class="highlight-red">Injecting</span> the Payload
+    </div>
+    <div class="animate split-60">
+      <div>
+        <p style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px">
+          The attacker copies <strong style="color:var(--red)">malicious smali classes</strong> into the decompiled app folder and patches <code style="color:var(--blue)">AndroidManifest.xml</code> to register the payload and add dangerous permissions.
+        </p>
+        <div class="smali animate">
+<span class="c">; Original onCreate — only 2 lines</span>
+<span class="sm-dir">.method</span> <span class="sm-op">public</span> <span class="sm-lbl">onCreate</span>(Landroid/os/Bundle;)V
+  <span class="sm-op">invoke-super</span> {p0, p1}
+
+  <span class="sm-inj">; ← INJECTED: launch malicious service</span>
+  <span class="sm-inj">new-instance v0, Lcom/payload/CameraRAT;</span>
+  <span class="sm-inj">invoke-direct {v0}, Lcom/payload/CameraRAT;->&lt;init&gt;()V</span>
+  <span class="sm-inj">invoke-virtual {p0, v0}, Landroid/content/Context;->startService(...)V</span>
+
+  <span class="sm-op">return-void</span>
+<span class="sm-dir">.end method</span>
+        </div>
+        <div class="code animate" style="margin-top:12px">
+<span class="c"># Manifest: adding dangerous permissions</span>
+<span class="k">&lt;uses-permission</span> android:name=<span class="s">"android.permission.CAMERA"</span> <span class="k">/&gt;</span>
+<span class="k">&lt;uses-permission</span> android:name=<span class="s">"android.permission.ACCESS_FINE_LOCATION"</span> <span class="k">/&gt;</span>
+<span class="r">&lt;!-- attacker adds as many as needed --&gt;</span>
+        </div>
+      </div>
+      <div class="animate">
+        <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:10px">💉 PAYLOAD TYPES AVAILABLE</div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:var(--red)"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><div class="tl-title">📷 Camera RAT</div><div class="tl-desc">Silently captures photos using front & rear camera, uploads to C2</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><div class="tl-title">📍 GPS Tracker</div><div class="tl-desc">Sends real-time GPS coordinates to attacker every 30 seconds</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:var(--warn)"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><div class="tl-title">💬 SMS Interceptor</div><div class="tl-desc">Intercepts OTPs — enables 2FA bypass on banking apps</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><div class="tl-title">🔑 Keylogger</div><div class="tl-desc">Uses Accessibility Service to capture all keystrokes & passwords</div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:var(--accent)"></div></div>
+            <div class="tl-content"><div class="tl-title">📂 File Exfiltrator</div><div class="tl-desc">Recursively uploads documents, photos, and sensitive files</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5 — REPACKAGE & SIGN
+══════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Phase 4</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:20px">
+      Repackage &amp; <span class="highlight">Re-Sign</span>
+    </div>
+    <div class="animate split">
+      <div>
+        <p style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px">
+          After injection, the attacker rebuilds the APK and signs it with a <strong style="color:var(--warn)">self-generated certificate</strong>. Android requires all APKs to be signed — but it does NOT require the certificate to match the original developer's.
+        </p>
+        <div class="code animate">
+<span class="c"># Step 1: Rebuild APK</span>
+<span class="g">$</span> apktool <span class="k">b</span> WhatsApp_Clone/ -o bound.apk
+
+<span class="c"># Step 2: Generate attacker certificate</span>
+<span class="g">$</span> keytool -genkey -v -keystore attacker.jks \
+    -keyalg RSA -keysize 2048 -validity 10000
+
+<span class="c"># Step 3: Sign the APK</span>
+<span class="g">$</span> jarsigner -keystore attacker.jks bound.apk attacker
+
+<span class="c"># Step 4: Align for installation</span>
+<span class="g">$</span> zipalign -v 4 bound.apk <span class="s">WhatsApp_Bound.apk</span>
+        </div>
+      </div>
+      <div class="animate">
+        <div style="font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Before vs After</div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--blue);margin-bottom:8px">📦 ORIGINAL APK</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">
+            Size: 28.4 MB<br>
+            Permissions: 2 (INTERNET, VIBRATE)<br>
+            Signature: <span style="color:var(--accent)">✓ Developer Certificate</span><br>
+            Classes: Original only
+          </div>
+        </div>
+        <div class="card card-red">
+          <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:8px">☠ BOUND APK</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">
+            Size: 30.2 MB <span style="color:var(--warn)">(+1.8 MB payload)</span><br>
+            Permissions: 7 <span style="color:var(--red)">(+5 dangerous)</span><br>
+            Signature: <span style="color:var(--warn)">⚠ Attacker Self-Signed</span><br>
+            Classes: +3 malicious injected
+          </div>
+        </div>
+        <div class="card card-warn" style="margin-top:12px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--warn);margin-bottom:8px">⚠ SIGNATURE BYPASS</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.7">
+            Android's signature check only validates the APK wasn't corrupted — it doesn't verify the signer's identity. So ANY valid signature works for sideloaded APKs.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6 — DEPLOYMENT (SOCIAL ENGINEERING)
+══════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Phase 5</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:20px">
+      <span class="highlight-red">Deploying</span> to Victim
+    </div>
+    <div class="animate" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+      <div class="card card-red">
+        <div style="font-size:1.5rem;margin-bottom:8px">📱</div>
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:6px">Social Engineering</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7">Send via WhatsApp/Telegram as "new version" of a popular app. Victim installs willingly.</div>
+      </div>
+      <div class="card card-warn">
+        <div style="font-size:1.5rem;margin-bottom:8px">📧</div>
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:6px">Phishing Campaign</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7">Fake email from "Google Play" with download link to trojanized app hosted on attacker server.</div>
+      </div>
+      <div class="card card-blue">
+        <div style="font-size:1.5rem;margin-bottom:8px">🔌</div>
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:6px">ADB (Physical)</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7">Direct USB install via <code>adb install -r</code>. Bypasses Play Protect. Requires physical device access.</div>
+      </div>
+    </div>
+    <div class="animate split">
+      <div>
+        <div class="code">
+<span class="c"># Via USB (physical access)</span>
+<span class="g">$</span> adb connect 192.168.1.105:5555
+connected to 192.168.1.105:5555
+
+<span class="g">$</span> adb install -r WhatsApp_Bound.apk
+Performing Streamed Install
+<span class="g">Success</span>
+
+<span class="c"># Victim launches app → all good visually</span>
+<span class="c"># Meanwhile payload starts in background...</span>
+        </div>
+      </div>
+      <div>
+        <div class="phone-row">
+          <div class="phone-wrap">
+            <div class="phone-lbl">📱 Victim Device</div>
+            <div class="phone-device">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <div class="phone-status"><span>9:41</span><span>📶🔋</span></div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+                  <div>
+                    <div class="app-icon-mini app-legit">🔢</div>
+                    <div class="app-name-mini">Calc</div>
+                  </div>
+                  <div>
+                    <div class="app-icon-mini app-legit">📷</div>
+                    <div class="app-name-mini">Camera</div>
+                  </div>
+                  <div>
+                    <div class="app-icon-mini app-bound">💬<span class="virus-badge">!</span></div>
+                    <div class="app-name-mini" style="color:var(--red)">WA*</div>
+                  </div>
+                </div>
+                <div style="font-size:5.5px;color:var(--red);margin-top:4px;padding:2px">⚠ Unknown source</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7 — C2 COMMUNICATION
+══════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Phase 6 — Endgame</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:20px">
+      C2 Communication &amp; <span class="highlight-red">Data Exfiltration</span>
+    </div>
+    <div class="animate split-60">
+      <div>
+        <p style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px">
+          Once installed, the payload establishes a connection to the attacker's <strong style="color:var(--red)">Command & Control (C2) server</strong>. Data is exfiltrated using encrypted HTTPS to avoid detection.
+        </p>
+        <div class="code animate">
+<span class="c"># Attacker starts listener (netcat)</span>
+<span class="g">$</span> nc -lvnp 4444
+Listening on 0.0.0.0 4444
+
+<span class="c"># Victim installs and launches app...</span>
+Connection from 192.168.1.105:54231
+
+<span class="r">[DATA]</span> 📷 Photo captured: selfie_001.jpg
+<span class="r">[DATA]</span> 📍 GPS: 28.6139°N 77.2090°E
+<span class="r">[DATA]</span> 💬 OTP: 847291 (HDFC Bank)
+<span class="r">[DATA]</span> 📂 Uploading bank_statement.pdf...
+        </div>
+        <div class="card card-red animate" style="margin-top:12px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:6px">🕵 PERSISTENCE TRICKS</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">
+            • <code>RECEIVE_BOOT_COMPLETED</code> → restarts on every reboot<br>
+            • Foreground service → harder to kill<br>
+            • WorkManager → scheduled background tasks<br>
+            • AlarmManager → periodic data uploads
+          </div>
+        </div>
+      </div>
+      <div class="animate">
+        <div class="stat-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <div class="stat-card red">
+            <div class="stat-val">2FA</div>
+            <div class="stat-lbl">Bypass via SMS OTP</div>
+          </div>
+          <div class="stat-card warn">
+            <div class="stat-val">0</div>
+            <div class="stat-lbl">User Alerts Shown</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-val">∞</div>
+            <div class="stat-lbl">Persistence Reboots</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-val">HTTPS</div>
+            <div class="stat-lbl">Encrypted Exfil</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div style="font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">EXFIL DATA TYPES</div>
+          <div class="perm-grid">
+            <span class="perm-tag perm-danger">Photos</span>
+            <span class="perm-tag perm-danger">Location</span>
+            <span class="perm-tag perm-danger">OTP/SMS</span>
+            <span class="perm-tag perm-danger">Passwords</span>
+            <span class="perm-tag perm-danger">Contacts</span>
+            <span class="perm-tag perm-danger">Documents</span>
+            <span class="perm-tag perm-danger">Call Logs</span>
+            <span class="perm-tag perm-danger">Audio</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8 — DETECTION & DEFENSE
+══════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="animate tag-line">Defense & Mitigation</div>
+    <div class="animate slide-title" style="font-size:clamp(1.6rem,3.5vw,2.6rem);margin-bottom:20px">
+      How to <span class="highlight">Detect</span> &amp; <span class="highlight">Defend</span>
+    </div>
+    <div class="animate" style="margin-bottom:16px">
+      <table class="def-table">
+        <thead>
+          <tr>
+            <th>Detection Method</th>
+            <th>What It Catches</th>
+            <th>User / Dev?</th>
+            <th>Effectiveness</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>📋 Check permissions before install</td>
+            <td>Excessive/suspicious permissions</td>
+            <td>User</td>
+            <td><span class="c-green">★★★★☆</span></td>
+          </tr>
+          <tr>
+            <td>🔍 Verify APK signature hash</td>
+            <td>Re-signed / tampered APK</td>
+            <td>Advanced User</td>
+            <td><span class="c-green">★★★★★</span></td>
+          </tr>
+          <tr>
+            <td>🛡 Google Play Protect scan</td>
+            <td>Known malware signatures</td>
+            <td>User</td>
+            <td><span class="c-green">★★★☆☆</span></td>
+          </tr>
+          <tr>
+            <td>🧪 Static Analysis (MobSF)</td>
+            <td>Malicious code patterns in smali</td>
+            <td>Security Analyst</td>
+            <td><span class="c-green">★★★★★</span></td>
+          </tr>
+          <tr>
+            <td>📡 Network traffic monitoring</td>
+            <td>Unusual outbound connections</td>
+            <td>IT/Admin</td>
+            <td><span class="c-green">★★★★☆</span></td>
+          </tr>
+          <tr>
+            <td>🔒 Install only from Play Store</td>
+            <td>Prevents most APK binding attacks</td>
+            <td>User</td>
+            <td><span class="c-green">★★★★★</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="animate" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="card card-green">
+        <div style="font-size:1rem;margin-bottom:6px">✅ FOR USERS</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7">Only install from Play Store. Never install APKs from WhatsApp/Telegram. Always review permissions.</div>
+      </div>
+      <div class="card card-blue">
+        <div style="font-size:1rem;margin-bottom:6px">🔬 FOR ANALYSTS</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7">Use MobSF / jadx for static analysis. Compare APK hash with official release. Check manifest diffs.</div>
+      </div>
+      <div class="card card-warn">
+        <div style="font-size:1rem;margin-bottom:6px">🛡 FOR DEVELOPERS</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.7">Use certificate pinning. Implement root detection. Enable Play Integrity API. Use anti-tamper checks.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SLIDE 9 — LIVE DEMO + Q&A
+══════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="grid-bg"></div>
+  <div class="scanline-fx"></div>
+  <div class="slide-inner" style="justify-content:center;align-items:center;text-align:center">
+    <div class="animate tag-line">Hands-On</div>
+    <div class="animate slide-title" style="margin-bottom:16px">
+      Live <span class="highlight-red">Demo</span> Time
+    </div>
+    <div class="animate slide-sub" style="text-align:center;margin:0 auto 32px">
+      Let's walk through all 6 steps of the binding attack in real-time using the interactive simulator.
+    </div>
+    <div class="animate" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">
+      <a href="index.html" target="_blank" class="demo-btn" style="font-size:1rem;padding:16px 32px">
+        🚀 Open Live Simulator
+      </a>
+    </div>
+    <div class="animate glow-line" style="max-width:400px;margin:0 auto 32px"></div>
+    <div class="animate slide-title" style="font-size:clamp(1.4rem,3vw,2.2rem);margin-bottom:16px">
+      Questions &amp; <span class="highlight">Answers</span>
+    </div>
+    <div class="animate" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:800px;margin:0 auto">
+      <div class="card card-red" style="text-align:left">
+        <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:6px">❓ CAN IT BYPASS PLAY PROTECT?</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Play Protect only scans Play Store apps by default. Sideloaded APKs can bypass it with obfuscation.</div>
+      </div>
+      <div class="card card-blue" style="text-align:left">
+        <div style="font-size:.72rem;font-weight:700;color:var(--blue);margin-bottom:6px">❓ DOES IT WORK ON ALL ANDROID?</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Yes. Works on Android 4.0+ but newer versions require explicit user permission for dangerous perms.</div>
+      </div>
+      <div class="card card-green" style="text-align:left">
+        <div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:6px">❓ HOW TO REMOVE IT?</div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.6">Uninstall the app. Factory reset if persistent. Use AV scan. Change all passwords immediately.</div>
+      </div>
+    </div>
+    <div class="animate" style="margin-top:24px;font-size:.78rem;color:var(--muted)">
+      ⚠ This demo was conducted in a controlled, offline environment. No real devices or data were harmed.
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════ -->
+<div id="nav">
+  <button onclick="prevSlide()" title="Previous (←)">←</button>
+  <div class="dot-nav" id="dot-nav"></div>
+  <span id="slide-counter">1 / 10</span>
+  <button onclick="nextSlide()" title="Next (→)">→</button>
+  <button onclick="toggleFullscreen()" title="Fullscreen (F)">⛶</button>
+</div>
+
+<script>
+const TOTAL = 10;
+let current = 0;
+let prevIdx = -1;
+
+const pnotes = [
+  "Introduce yourself and the topic. Click 'Start Presentation' or press → to begin.",
+  "Explain the core concept. Emphasize: victim sees a NORMAL app but attacker controls it.",
+  "Walk through all 6 steps at a high level. Mention the tools required.",
+  "Show the decompile command. Explain what smali is — 'think of it as Android assembly language'.",
+  "This is the KEY step. Show the smali snippet — explain how one call to startService() is all it takes.",
+  "Explain signing: 'Android checks the APK is signed, but not WHO signed it.' That's the vulnerability.",
+  "Discuss social engineering — 'The weakest link is always the human, not the OS.'",
+  "Live demo moment. Open the simulator and walk through all 6 steps live.",
+  "Cover defenses. Ask audience: 'How many of you install APKs from outside Play Store?'",
+  "Open the live simulator for questions. Let audience try it themselves.",
+];
+
+function buildDots() {
+  const dn = document.getElementById('dot-nav');
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    d.title = `Slide ${i+1}`;
+    dn.appendChild(d);
+  }
+}
+
+function goTo(n) {
+  if (n < 0 || n >= TOTAL) return;
+  const slides = document.querySelectorAll('.slide');
+  slides[current]?.classList.remove('active');
+  slides[current]?.classList.add('exit');
+  setTimeout(() => slides[current]?.classList.remove('exit'), 600);
+  current = n;
+  slides[current]?.classList.add('active');
+  // dots
+  document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === n));
+  // counter
+  document.getElementById('slide-counter').textContent = `${n+1} / ${TOTAL}`;
+  document.getElementById('corner-slide').textContent = `Slide ${n+1}/${TOTAL}`;
+  // progress
+  document.getElementById('progress-bar').style.width = `${((n+1)/TOTAL)*100}%`;
+  // presenter note
+  const pn = document.getElementById('pnote');
+  pn.textContent = `💡 ${pnotes[n]}`;
+  pn.style.opacity = '1';
+  setTimeout(() => pn.style.opacity = '0', 5000);
+}
+
+function nextSlide() { goTo(current + 1); }
+function prevSlide() { goTo(current - 1); }
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+  if (e.key === 'ArrowLeft') prevSlide();
+  if (e.key.toLowerCase() === 'f') toggleFullscreen();
+  if (e.key === 'Home') goTo(0);
+  if (e.key === 'End') goTo(TOTAL - 1);
+});
+
+buildDots();
+goTo(0);
+</script>
+</body>
+</html>
